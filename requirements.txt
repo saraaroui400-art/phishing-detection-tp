@@ -1,0 +1,10 @@
+# Phishing Detection TP Requirements
+
+HTML5
+CSS3
+JavaScript
+
+# Optional Security Tools
+Wireshark
+SET Toolkit
+YARA
