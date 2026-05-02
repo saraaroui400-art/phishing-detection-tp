@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberLab — Phishing Detection TP</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Exo+2:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --panel: #0d1422;
+    --border: #1a2a4a;
+    --accent: #00d4ff;
+    --accent2: #ff3c6e;
+    --accent3: #39ff6e;
+    --warn: #ffaa00;
+    --text: #c8dff5;
+    --text-dim: #4a6a8a;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 20px rgba(255,60,110,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(255,60,110,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* GRID BACKGROUND */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,20,34,0.9);
+    backdrop-filter: blur(10px);
+  }
+  .logo {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.3rem;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    letter-spacing: 2px;
+  }
+  .logo span { color: var(--accent2); }
+  .status-bar {
+    display: flex;
+    gap: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .status-bar .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent3);
+    margin-right: 5px;
+    animation: blink 1.5s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* STEPPER */
+  .stepper {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    padding: 24px 32px;
+    background: rgba(8,12,20,0.6);
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    transition: all 0.3s;
+    position: relative;
+  }
+  .step:first-child { border-radius: 8px 0 0 8px; }
+  .step:last-child { border-radius: 0 8px 8px 0; }
+  .step:not(:last-child) { border-right: none; }
+  .step.active {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    box-shadow: var(--glow);
+  }
+  .step.done {
+    border-color: var(--accent3);
+    background: rgba(57,255,110,0.05);
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: all 0.3s;
+  }
+  .step.active .step-num { border-color: var(--accent); color: var(--accent); box-shadow: var(--glow); }
+  .step.done .step-num { border-color: var(--accent3); color: var(--accent3); background: rgba(57,255,110,0.1); }
+  .step-label { font-size: 0.82rem; font-weight: 600; color: var(--text-dim); transition: all 0.3s; }
+  .step.active .step-label { color: var(--accent); }
+  .step.done .step-label { color: var(--accent3); }
+
+  /* MAIN */
+  main {
+    position: relative;
+    z-index: 10;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .phase { display: none; animation: fadeIn 0.4s ease; }
+  .phase.active { display: block; }
+  @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+  .phase-header {
+    margin-bottom: 28px;
+  }
+  .phase-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent2);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .phase-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+  .phase-desc { font-size: 0.9rem; color: var(--text-dim); margin-top: 6px; line-height: 1.6; }
+
+  /* PANELS */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::before {
+    content: '';
+    width: 3px; height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+    box-shadow: var(--glow);
+  }
+
+  /* INPUTS */
+  label { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 6px; display: block; font-family: 'Share Tech Mono', monospace; }
+  input[type=text], input[type=email], input[type=password], select, textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    margin-bottom: 14px;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(0,212,255,0.15);
+  }
+  textarea { resize: vertical; min-height: 120px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 11px 28px;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0096cc);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0,212,255,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,212,255,0.5); }
+  .btn-danger {
+    background: linear-gradient(135deg, var(--accent2), #cc1144);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255,60,110,0.3);
+  }
+  .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,60,110,0.5); }
+  .btn-success {
+    background: linear-gradient(135deg, var(--accent3), #00aa44);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(57,255,110,0.3);
+  }
+  .btn-success:hover { transform: translateY(-2px); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .btn-outline:hover { background: rgba(0,212,255,0.1); }
+  .btn-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media(max-width:700px){ .grid-2{grid-template-columns:1fr;} }
+
+  /* ======================== PHASE 1 ======================== */
+  .template-selector { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .template-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .template-btn.active, .template-btn:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(255,60,110,0.08);
+  }
+
+  .preview-box {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .preview-bar {
+    background: #e0e0e0;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preview-bar-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .url-bar {
+    flex: 1;
+    background: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: #333;
+    margin: 0 8px;
+  }
+  .preview-content { padding: 20px; }
+
+  /* Phishing page preview */
+  .phish-preview {
+    max-width: 380px;
+    margin: 0 auto;
+    font-family: Arial, sans-serif;
+    color: #333;
+  }
+  .phish-preview .logo-area {
+    text-align: center;
+    padding: 16px 0 10px;
+    font-size: 1.4rem;
+    font-weight: bold;
+  }
+  .phish-preview h3 { text-align: center; font-size: 1rem; margin-bottom: 14px; font-weight: normal; }
+  .phish-preview input {
+    width: 100%;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #333;
+    background: #fff;
+  }
+  .phish-preview button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .phish-preview .disclaimer { font-size: 0.7rem; text-align: center; margin-top: 10px; color: #999; }
+
+  /* IOC Tags */
+  .ioc-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .ioc-tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    border: 1px solid;
+  }
+  .ioc-tag.red { border-color: var(--accent2); color: var(--accent2); background: rgba(255,60,110,0.08); }
+  .ioc-tag.yellow { border-color: var(--warn); color: var(--warn); background: rgba(255,170,0,0.08); }
+  .ioc-tag.green { border-color: var(--accent3); color: var(--accent3); background: rgba(57,255,110,0.08); }
+
+  /* ======================== PHASE 2 ======================== */
+  .header-result {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+  .header-field { display: flex; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .header-key { color: var(--accent); min-width: 160px; }
+  .header-val { color: var(--text); }
+  .header-val.danger { color: var(--accent2); }
+  .header-val.warn { color: var(--warn); }
+  .header-val.safe { color: var(--accent3); }
+
+  .score-bar-container { margin: 16px 0; }
+  .score-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
+  .score-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+
+  /* ======================== PHASE 3 ======================== */
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+  @media(max-width:700px){ .stat-grid{grid-template-columns:repeat(2,1fr);} }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .stat-num {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label { font-size: 0.75rem; color: var(--text-dim); font-family: 'Share Tech Mono', monospace; }
+
+  .alert-list { display: flex; flex-direction: column; gap: 10px; }
+  .alert-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    border: 1px solid;
+    animation: slideIn 0.4s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+  .alert-item.critical { border-color: var(--accent2); background: rgba(255,60,110,0.07); }
+  .alert-item.warning { border-color: var(--warn); background: rgba(255,170,0,0.07); }
+  .alert-item.info { border-color: var(--accent); background: rgba(0,212,255,0.07); }
+  .alert-icon { font-size: 1.3rem; }
+  .alert-content { flex: 1; }
+  .alert-title { font-weight: 600; font-size: 0.9rem; }
+  .alert-desc { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; font-family: 'Share Tech Mono', monospace; }
+  .alert-time { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--text-dim); }
+  .alert-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .badge-critical { background: var(--accent2); color: #fff; }
+  .badge-warning { background: var(--warn); color: #000; }
+  .badge-info { background: var(--accent); color: #000; }
+
+  /* Chart */
+  .chart-container { height: 140px; display: flex; align-items: flex-end; gap: 6px; padding: 10px 0; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.8s ease; min-height: 4px; }
+  .bar-lbl { font-size: 0.65rem; color: var(--text-dim); font-family: 'Share Tech Mono', monospace; }
+
+  /* YARA Rule */
+  .code-block {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.9;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code-block .kw { color: var(--accent); }
+  .code-block .str { color: var(--accent2); }
+  .code-block .cmt { color: var(--text-dim); }
+  .code-block .fn { color: var(--accent3); }
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: var(--border);
+    border: none;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: var(--accent); color: #000; }
+
+  /* ======================== PHASE 4 ======================== */
+  .report-preview {
+    background: #fff;
+    color: #111;
+    border-radius: 10px;
+    padding: 40px;
+    font-family: Georgia, serif;
+    max-width: 800px;
+    margin: 0 auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .report-header {
+    border-bottom: 3px solid #1a3a6a;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .report-header h1 { font-size: 1.4rem; color: #1a3a6a; font-family: 'Rajdhani', sans-serif; }
+  .report-header .meta { font-size: 0.75rem; color: #666; font-family: monospace; text-align: right; }
+  .report-section { margin-bottom: 22px; }
+  .report-section h2 { font-size: 1rem; color: #1a3a6a; border-left: 3px solid #1a3a6a; padding-left: 10px; margin-bottom: 10px; font-family: 'Rajdhani', sans-serif; font-weight: 700; }
+  .report-section p { font-size: 0.85rem; line-height: 1.7; color: #333; margin-bottom: 8px; }
+  .report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .report-table th { background: #1a3a6a; color: #fff; padding: 8px 12px; text-align: left; font-family: 'Rajdhani', sans-serif; }
+  .report-table td { padding: 7px 12px; border-bottom: 1px solid #e0e0e0; color: #333; font-family: monospace; }
+  .report-table tr:nth-child(even) td { background: #f5f8ff; }
+  .report-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+  .rb-high { background: #ff3c6e; color: #fff; }
+  .rb-med { background: #ffaa00; color: #000; }
+  .rb-low { background: #39ff6e; color: #000; }
+  .report-footer { border-top: 2px solid #1a3a6a; padding-top: 12px; font-size: 0.75rem; color: #888; font-family: monospace; display: flex; justify-content: space-between; }
+
+  /* PROGRESS */
+  .progress-wrap { margin-bottom: 24px; }
+  .progress-bar-outer { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; }
+  .progress-bar-inner { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s; }
+  .progress-label { font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--accent3);
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent3);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* TERMINAL TYPING */
+  .typing-line {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent3);
+    white-space: pre;
+    overflow: hidden;
+    border-right: 2px solid var(--accent3);
+    animation: typing 2s steps(40, end), blink-cursor 0.8s step-end infinite;
+  }
+  @keyframes typing { from{width:0} to{width:100%} }
+  @keyframes blink-cursor { 50%{border-color:transparent} }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* THREAT METER */
+  .threat-meter {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid;
+    margin-bottom: 16px;
+  }
+  .threat-meter.high { border-color: var(--accent2); background: rgba(255,60,110,0.08); }
+  .threat-meter.med { border-color: var(--warn); background: rgba(255,170,0,0.08); }
+  .threat-meter.low { border-color: var(--accent3); background: rgba(57,255,110,0.08); }
+  .threat-icon { font-size: 2rem; }
+  .threat-info h3 { font-size: 1rem; font-weight: 700; margin-bottom: 2px; }
+  .threat-info p { font-size: 0.78rem; color: var(--text-dim); font-family: 'Share Tech Mono', monospace; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CYBER<span>LAB</span> // TP Cybercriminalité</div>
+  <div class="status-bar">
+    <span><span class="dot"></span>LAB ACTIF</span>
+    <span id="clock" style="color:var(--accent)"></span>
+    <span>Master Sécurité</span>
+  </div>
+</header>
+
+<!-- STEPPER -->
+<div class="stepper">
+  <div class="step active" onclick="goToPhase(1)" id="step1">
+    <div class="step-num">1</div>
+    <div class="step-label">🎣 Simulation Phishing</div>
+  </div>
+  <div class="step" onclick="goToPhase(2)" id="step2">
+    <div class="step-num">2</div>
+    <div class="step-label">📧 Analyse Headers</div>
+  </div>
+  <div class="step" onclick="goToPhase(3)" id="step3">
+    <div class="step-num">3</div>
+    <div class="step-label">🚨 Dashboard Détection</div>
+  </div>
+  <div class="step" onclick="goToPhase(4)" id="step4">
+    <div class="step-num">4</div>
+    <div class="step-label">📋 Rapport Final</div>
+  </div>
+</div>
+
+<main>
+
+  <!-- =================== PHASE 1 =================== -->
+  <div class="phase active" id="phase1">
+    <div class="phase-header">
+      <div class="phase-tag">// Phase 01 — Attaque</div>
+      <div class="phase-title">Simulation de Page Phishing</div>
+      <div class="phase-desc">Créez une page de login frauduleuse pour comprendre les techniques d'ingénierie sociale. Environnement contrôlé à des fins pédagogiques uniquement.</div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="panel">
+          <div class="panel-title">Configuration de l'attaque</div>
+          <label>CIBLE (Service imité)</label>
+          <div class="template-selector">
+            <button class="template-btn active" onclick="setTemplate('facebook')">Facebook</button>
+            <button class="template-btn" onclick="setTemplate('google')">Google</button>
+            <button class="template-btn" onclick="setTemplate('bank')">Banque</button>
+            <button class="template-btn" onclick="setTemplate('microsoft')">Microsoft</button>
+          </div>
+
+          <label>DOMAINE MALVEILLANT (spoofé)</label>
+          <input type="text" id="phish-domain" value="facebo0k-secure.net" placeholder="domaine-suspect.com">
+
+          <label>OBJET EMAIL D'HAMEÇONNAGE</label>
+          <input type="text" id="phish-subject" value="⚠️ Votre compte a été compromis — Action requise">
+
+          <label>CORPS DE L'EMAIL</label>
+          <textarea id="phish-body">Cher utilisateur,
+
+Nous avons détecté une activité suspecte sur votre compte. Veuillez vérifier votre identité immédiatement en cliquant sur le lien ci-dessous.
+
+→ Vérifier mon compte maintenant
+
+Cette action doit être effectuée dans les 24h.</textarea>
+
+          <div class="btn-group">
+            <button class="btn btn-danger" onclick="launchPhishing()">⚡ Générer la page</button>
+            <button class="btn btn-outline" onclick="analyzeIOC()">🔍 Analyser IOCs</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <div class="panel-title">Aperçu de la page frauduleuse</div>
+          <div class="preview-box">
+            <div class="preview-bar">
+              <div class="preview-bar-dot" style="background:#ff5f57"></div>
+              <div class="preview-bar-dot" style="background:#febc2e"></div>
+              <div class="preview-bar-dot" style="background:#28c840"></div>
+              <div class="url-bar" id="url-bar">https://facebo0k-secure.net/login</div>
+              <span style="font-size:0.7rem;color:#666">⚠️ Non sécurisé</span>
+            </div>
+            <div class="preview-content" id="phish-preview">
+              <div class="phish-preview">
+                <div class="logo-area" id="p-logo" style="color:#1877f2">f Facebook</div>
+                <h3 id="p-title">Connectez-vous à Facebook</h3>
+                <input type="email" placeholder="Adresse e-mail ou téléphone" style="font-family:Arial">
+                <input type="password" placeholder="Mot de passe" style="font-family:Arial">
+                <button id="p-btn" style="background:#1877f2">Se connecter</button>
+                <div class="disclaimer">🔒 Connexion sécurisée | Politique de confidentialité</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="ioc-panel" style="display:none">
+          <div class="panel-title">Indicateurs de Compromission (IOC)</div>
+          <div class="ioc-list" id="ioc-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="email-panel" style="display:none">
+      <div class="panel-title">Email de Phishing généré</div>
+      <div class="header-result">
+        <div class="header-field"><span class="header-key">FROM:</span><span class="header-val danger" id="em-from"></span></div>
+        <div class="header-field"><span class="header-key">REPLY-TO:</span><span class="header-val danger">no-reply@secure-accounts.xyz</span></div>
+        <div class="header-field"><span class="header-key">TO:</span><span class="header-val">victime@domaine.com</span></div>
+        <div class="header-field"><span class="header-key">SUBJECT:</span><span class="header-val warn" id="em-subj"></span></div>
+        <div class="header-field"><span class="header-key">X-MAILER:</span><span class="header-val">Fake SMTP Server v2.1</span></div>
+        <div class="header-field"><span class="header-key">PHISHING-URL:</span><span class="header-val danger" id="em-url"></span></div>
+      </div>
+    </div>
+
+    <div class="btn-group" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-primary" onclick="nextPhase(1)">Passer à l'Analyse Headers →</button>
+    </div>
+  </div>
+
+  <!-- =================== PHASE 2 =================== -->
+  <div class="phase" id="phase2">
+    <div class="phase-header">
+      <div class="phase-tag">// Phase 02 — Investigation</div>
+      <div class="phase-title">Analyse des En-têtes Email</div>
+      <div class="phase-desc">Analysez les headers SMTP pour identifier l'origine réelle de l'email, détecter le spoofing et évaluer l'authentification.</div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="panel">
+          <div class="panel-title">Entrez les headers email</div>
+          <label>COLLER LES HEADERS SMTP ICI</label>
+          <textarea id="raw-headers" style="min-height:200px;font-size:0.75rem" placeholder="Received: from mail.suspicious.xyz (203.0.113.1)
+  by mx.google.com with SMTP
+From: security@facebo0k-secure.net
+Return-Path: <phisher@evil.ru>
+X-Originating-IP: 185.220.101.45
+SPF: FAIL
+DKIM: FAIL
+DMARC: FAIL">Received: from mail.evil-sender.ru (185.220.101.45)
+  by mx.victim.com with SMTP id xyz123
+Received: from [10.0.0.5] (unknown [185.220.101.45])
+From: "Facebook Security" <security@facebo0k-secure.net>
+Reply-To: <noreply@malicious-server.xyz>
+Return-Path: <bounce@evil-sender.ru>
+To: victime@entreprise.com
+Subject: =?UTF-8?B?4pqUVm90cmUgY29tcHRlIGEgw6l0w6kgY29tcHJvbWlz?=
+Date: Mon, 01 Jan 2024 03:22:11 +0300
+Message-ID: <phish_001@evil-sender.ru>
+X-Originating-IP: 185.220.101.45
+X-Mailer: PhishKit v3.2
+Authentication-Results: mx.victim.com;
+  spf=fail smtp.mailfrom=facebo0k-secure.net;
+  dkim=fail header.d=facebo0k-secure.net;
+  dmarc=fail p=none</textarea>
+          <div class="btn-group">
+            <button class="btn btn-primary" onclick="analyzeHeaders()">🔬 Analyser les headers</button>
+            <button class="btn btn-outline" onclick="loadSample()">📋 Charger exemple</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel" id="analysis-result" style="display:none">
+          <div class="panel-title">Résultats d'analyse</div>
+          <div id="header-parsed"></div>
+          <div class="divider"></div>
+          <div id="auth-scores"></div>
+        </div>
+
+        <div class="panel" id="threat-panel" style="display:none">
+          <div class="panel-title">Évaluation de la Menace</div>
+          <div id="threat-level"></div>
+          <div id="verdict-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="yara-panel" style="display:none">
+      <div class="panel-title">🛡️ Règle YARA générée automatiquement</div>
+      <div class="code-block" id="yara-code">
+        <button class="copy-btn" onclick="copyYara()">Copier</button>
+      </div>
+    </div>
+
+    <div class="btn-group" style="justify-content:space-between;margin-top:10px">
+      <button class="btn btn-outline" onclick="prevPhase(2)">← Retour</button>
+      <button class="btn btn-primary" onclick="nextPhase(2)">Dashboard Détection →</button>
+    </div>
+  </div>
+
+  <!-- =================== PHASE 3 =================== -->
+  <div class="phase" id="phase3">
+    <div class="phase-header">
+      <div class="phase-tag">// Phase 03 — Détection</div>
+      <div class="phase-title">Dashboard Détection des Menaces</div>
+      <div class="phase-desc">Vue globale en temps réel des alertes, statistiques d'attaque et règles de détection actives.</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent2)" id="s-total">0</div>
+        <div class="stat-label">Tentatives détectées</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--warn)" id="s-blocked">0</div>
+        <div class="stat-label">Emails bloqués</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent3)" id="s-rate">0%</div>
+        <div class="stat-label">Taux de détection</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent)" id="s-rules">0</div>
+        <div class="stat-label">Règles actives</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="panel">
+          <div class="panel-title">📊 Activité des attaques (7 jours)</div>
+          <div class="chart-container" id="chart-bars"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">🛡️ Règles de Détection (SIEM)</div>
+          <div id="rules-list"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <div class="panel-title">🚨 Alertes en Temps Réel</div>
+          <div class="alert-list" id="alert-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group" style="justify-content:space-between;margin-top:10px">
+      <button class="btn btn-outline" onclick="prevPhase(3)">← Retour</button>
+      <button class="btn btn-primary" onclick="nextPhase(3)">Générer le Rapport Final →</button>
+    </div>
+  </div>
+
+  <!-- =================== PHASE 4 =================== -->
+  <div class="phase" id="phase4">
+    <div class="phase-header">
+      <div class="phase-tag">// Phase 04 — Documentation</div>
+      <div class="phase-title">Rapport Technique Final</div>
+      <div class="phase-desc">Rapport complet du TP incluant méthodologie, résultats d'analyse et recommandations de sécurité.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Personnalisation du rapport</div>
+      <div class="grid-2">
+        <div>
+          <label>NOM DE L'ÉTUDIANT</label>
+          <input type="text" id="r-name" placeholder="Votre nom complet">
+          <label>UNIVERSITÉ / ÉTABLISSEMENT</label>
+          <input type="text" id="r-univ" placeholder="Université ...">
+        </div>
+        <div>
+          <label>ENCADREUR</label>
+          <input type="text" id="r-prof" placeholder="Nom du professeur">
+          <label>ANNÉE ACADÉMIQUE</label>
+          <input type="text" id="r-year" value="2024-2025">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="generateReport()">📄 Générer le Rapport</button>
+    </div>
+
+    <div id="report-output" style="display:none;margin-top:20px">
+      <div class="report-preview" id="report-content">
+        <!-- filled by JS -->
+      </div>
+      <div class="btn-group" style="justify-content:center;margin-top:20px">
+        <button class="btn btn-success" onclick="printReport()">🖨️ Imprimer / Exporter PDF</button>
+        <button class="btn btn-outline" onclick="prevPhase(4)">← Retour</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== GLOBAL STATE =====================
+const state = {
+  currentPhase: 1,
+  completedPhases: [],
+  phishingTarget: 'facebook',
+  phishDomain: '',
+  analysisData: {},
+  alerts: []
+};
+
+const templates = {
+  facebook: { name:'Facebook', color:'#1877f2', logo:'f Facebook', title:'Connectez-vous à Facebook', btn:'Se connecter' },
+  google: { name:'Google', color:'#ea4335', logo:'G Google', title:'Connectez-vous avec Google', btn:'Suivant' },
+  bank: { name:'Banque CIH', color:'#003d7a', logo:'🏦 CIH Bank', title:'Accès Espace Client', btn:'Valider' },
+  microsoft: { name:'Microsoft', color:'#0078d4', logo:'⊞ Microsoft', title:'Connexion à votre compte', btn:'Se connecter' }
+};
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('fr-FR');
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ===================== NAVIGATION =====================
+function goToPhase(n) {
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+  document.getElementById('phase'+n).classList.add('active');
+  document.querySelectorAll('.step').forEach((s,i) => {
+    s.classList.remove('active','done');
+    if(i+1 === n) s.classList.add('active');
+    else if(state.completedPhases.includes(i+1)) s.classList.add('done');
+  });
+  state.currentPhase = n;
+  if(n===3) initDashboard();
+}
+
+function nextPhase(n) {
+  if(!state.completedPhases.includes(n)) state.completedPhases.push(n);
+  document.getElementById('step'+n).classList.remove('active');
+  document.getElementById('step'+n).classList.add('done');
+  goToPhase(n+1);
+  showToast('✅ Phase '+ n +' complétée !');
+}
+
+function prevPhase(n) { goToPhase(n-1); }
+
+// ===================== PHASE 1 =====================
+function setTemplate(t) {
+  state.phishingTarget = t;
+  document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  const tmpl = templates[t];
+  document.getElementById('p-logo').textContent = tmpl.logo;
+  document.getElementById('p-logo').style.color = tmpl.color;
+  document.getElementById('p-title').textContent = tmpl.title;
+  document.getElementById('p-btn').textContent = tmpl.btn;
+  document.getElementById('p-btn').style.background = tmpl.color;
+
+  const domains = { facebook:'facebo0k-secure.net', google:'g00gle-verify.com', bank:'cih-bank-securite.net', microsoft:'micros0ft-account.xyz' };
+  document.getElementById('phish-domain').value = domains[t];
+}
+
+function launchPhishing() {
+  const domain = document.getElementById('phish-domain').value || 'suspect.net';
+  const subj = document.getElementById('phish-subject').value;
+  state.phishDomain = domain;
+  document.getElementById('url-bar').textContent = 'https://'+domain+'/login';
+  document.getElementById('em-from').textContent = 'security@'+domain;
+  document.getElementById('em-subj').textContent = subj;
+  document.getElementById('em-url').textContent = 'https://'+domain+'/login?token=phish_xyz_001';
+  document.getElementById('email-panel').style.display = 'block';
+  analyzeIOC();
+  showToast('🎣 Page de phishing générée !');
+}
+
+function analyzeIOC() {
+  const domain = document.getElementById('phish-domain').value || 'suspect.net';
+  const iocs = [
+    { text:'Domaine typosquatté', type:'red' },
+    { text:'Pas de certificat SSL valide', type:'red' },
+    { text:'SPF: FAIL', type:'red' },
+    { text:'DKIM: FAIL', type:'red' },
+    { text:'Enregistré < 30 jours', type:'yellow' },
+    { text:'IP hors périmètre', type:'yellow' },
+    { text:'DMARC: NONE', type:'yellow' },
+    { text:'En-têtes manquants', type:'yellow' },
+    { text:'Hébergeur inconnu', type:'red' }
+  ];
+  document.getElementById('ioc-panel').style.display = 'block';
+  document.getElementById('ioc-list').innerHTML = iocs.map(i =>
+    `<span class="ioc-tag ${i.type}">${i.text}</span>`
+  ).join('');
+}
+
+// ===================== PHASE 2 =====================
+function analyzeHeaders() {
+  const raw = document.getElementById('raw-headers').value;
+  if(!raw.trim()) { showToast('⚠️ Collez des headers d\'abord !'); return; }
+
+  // Parse key fields
+  const getField = (k) => {
+    const m = raw.match(new RegExp(k+':\\s*(.+)', 'i'));
+    return m ? m[1].trim() : '—';
+  };
+
+  const from = getField('From');
+  const returnPath = getField('Return-Path');
+  const origIP = getField('X-Originating-IP') || '185.220.101.45';
+  const spf = raw.toLowerCase().includes('spf=fail') ? 'FAIL' : raw.toLowerCase().includes('spf=pass') ? 'PASS' : 'NEUTRAL';
+  const dkim = raw.toLowerCase().includes('dkim=fail') ? 'FAIL' : raw.toLowerCase().includes('dkim=pass') ? 'PASS' : 'FAIL';
+  const dmarc = raw.toLowerCase().includes('dmarc=fail') ? 'FAIL' : 'NONE';
+
+  state.analysisData = { from, returnPath, origIP, spf, dkim, dmarc };
+
+  document.getElementById('analysis-result').style.display = 'block';
+  document.getElementById('header-parsed').innerHTML = `
+    <div class="header-result">
+      <div class="header-field"><span class="header-key">FROM:</span><span class="header-val danger">${from}</span></div>
+      <div class="header-field"><span class="header-key">RETURN-PATH:</span><span class="header-val danger">${returnPath}</span></div>
+      <div class="header-field"><span class="header-key">IP Origine:</span><span class="header-val warn">${origIP}</span></div>
+      <div class="header-field"><span class="header-key">Géolocalisation:</span><span class="header-val danger">🇷🇺 Russie — Serveur TOR Exit Node</span></div>
+      <div class="header-field"><span class="header-key">Réputation IP:</span><span class="header-val danger">⚠️ Blacklistée (AbuseIPDB Score: 97%)</span></div>
+    </div>`;
+
+  const scores = [
+    { label:'SPF', val: spf==='PASS'?100:spf==='NEUTRAL'?40:5, status: spf },
+    { label:'DKIM', val: dkim==='PASS'?100:10, status: dkim },
+    { label:'DMARC', val: dmarc==='PASS'?100:15, status: dmarc },
+    { label:'Réputation domaine', val: 8, status:'FAIBLE' },
+  ];
+
+  document.getElementById('auth-scores').innerHTML = scores.map(s => {
+    const color = s.val > 60 ? 'var(--accent3)' : s.val > 30 ? 'var(--warn)' : 'var(--accent2)';
+    return `
+      <div class="score-bar-container">
+        <div class="score-label"><span>${s.label}</span><span style="color:${color}">${s.status} (${s.val}%)</span></div>
+        <div class="score-bar"><div class="score-bar-fill" style="width:${s.val}%;background:${color}"></div></div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('threat-panel').style.display = 'block';
+  document.getElementById('threat-level').innerHTML = `
+    <div class="threat-meter high">
+      <div class="threat-icon">🔴</div>
+      <div class="threat-info">
+        <h3 style="color:var(--accent2)">MENACE CRITIQUE — Score: 94/100</h3>
+        <p>Phishing confirmé | SPF/DKIM/DMARC: FAIL | IP blacklistée</p>
+      </div>
+    </div>`;
+
+  document.getElementById('verdict-box').innerHTML = `
+    <div class="ioc-list">
+      <span class="ioc-tag red">Spoofing d'identité</span>
+      <span class="ioc-tag red">IP TOR Exit Node</span>
+      <span class="ioc-tag red">Authentification FAIL</span>
+      <span class="ioc-tag yellow">Encodage Base64 suspect</span>
+      <span class="ioc-tag yellow">Timestamp anormal (3h du matin)</span>
+    </div>`;
+
+  // YARA Rule
+  document.getElementById('yara-panel').style.display = 'block';
+  const domain = state.phishDomain || 'facebo0k-secure.net';
+  const ip = origIP;
+  document.getElementById('yara-code').innerHTML = `
+    <button class="copy-btn" onclick="copyYara()">Copier</button>
+<span class="cmt">// Règle générée automatiquement par CyberLab TP</span>
+<span class="cmt">// Date: ${new Date().toLocaleDateString('fr-FR')} | Menace: Phishing</span>
+
+<span class="kw">rule</span> <span class="fn">Phishing_Email_Detection</span> {
+  <span class="kw">meta:</span>
+    author = <span class="str">"CyberLab TP"</span>
+    description = <span class="str">"Détection email phishing — ${templates[state.phishingTarget]?.name || 'cible'}"</span>
+    severity = <span class="str">"CRITICAL"</span>
+    date = <span class="str">"${new Date().toISOString().split('T')[0]}"</span>
+
+  <span class="kw">strings:</span>
+    $domain = <span class="str">"${domain}"</span> <span class="kw">nocase</span>
+    $ip = <span class="str">"${ip}"</span>
+    $spf_fail = <span class="str">"spf=fail"</span> <span class="kw">nocase</span>
+    $dkim_fail = <span class="str">"dkim=fail"</span> <span class="kw">nocase</span>
+    $return_path = <span class="str">"evil-sender"</span> <span class="kw">nocase</span>
+
+  <span class="kw">condition:</span>
+    ($domain <span class="kw">or</span> $ip) <span class="kw">and</span>
+    ($spf_fail <span class="kw">or</span> $dkim_fail) <span class="kw">and</span>
+    $return_path
+}`;
+
+  showToast('🔬 Analyse terminée — Menace CRITIQUE détectée !');
+}
+
+function loadSample() {
+  showToast('📋 Exemple chargé !');
+}
+
+function copyYara() {
+  showToast('📋 Règle YARA copiée !');
+}
+
+// ===================== PHASE 3 =====================
+const alertsData = [
+  { type:'critical', icon:'🔴', title:'Phishing Email Bloqué', desc:'FROM: security@'+'{domain}' +' | SPF/DKIM FAIL | IP: 185.220.101.45', badge:'CRITIQUE', time:'Il y a 2 min' },
+  { type:'critical', icon:'🔴', title:'Domaine Typosquatté Détecté', desc:'facebo0k-secure.net — Enregistré il y a 3 jours', badge:'CRITIQUE', time:'Il y a 5 min' },
+  { type:'warning', icon:'🟡', title:'Tentative de Login Suspecte', desc:'3 tentatives depuis IP TOR — 10.0.0.45', badge:'ALERTE', time:'Il y a 12 min' },
+  { type:'warning', icon:'🟡', title:'Encodage Base64 dans Subject', desc:'Obfuscation détectée dans l\'en-tête Subject', badge:'ALERTE', time:'Il y a 18 min' },
+  { type:'info', icon:'🔵', title:'Scan de ports entrant', desc:'Port 25/587 — Source: 203.0.113.5', badge:'INFO', time:'Il y a 30 min' },
+];
+
+const rulesData = [
+  { name:'SPF_DKIM_FAIL_BLOCK', status:'✅ Actif', hits: 47 },
+  { name:'TOR_EXIT_NODE_BLOCK', status:'✅ Actif', hits: 23 },
+  { name:'TYPOSQUATTING_DETECT', status:'✅ Actif', hits: 12 },
+  { name:'BASE64_SUBJECT_FLAG', status:'✅ Actif', hits: 8 },
+  { name:'NEW_DOMAIN_FLAG', status:'⚠️ Test', hits: 5 },
+];
+
+function initDashboard() {
+  // Animate stats
+  const targets = { 's-total': 247, 's-blocked': 231, 's-rate': 93, 's-rules': 5 };
+  Object.entries(targets).forEach(([id, target]) => {
+    let current = 0;
+    const interval = setInterval(() => {
+      current += Math.ceil(target / 30);
+      if(current >= target) { current = target; clearInterval(interval); }
+      document.getElementById(id).textContent = id === 's-rate' ? current+'%' : current;
+    }, 40);
+  });
+
+  // Chart
+  const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const vals = [18,34,22,61,47,89,38];
+  const max = Math.max(...vals);
+  document.getElementById('chart-bars').innerHTML = days.map((d,i) => {
+    const h = Math.round((vals[i]/max)*100);
+    const color = h > 70 ? 'var(--accent2)' : h > 40 ? 'var(--warn)' : 'var(--accent)';
+    return `<div class="bar-wrap">
+      <div class="bar" style="height:${h}%;background:${color};box-shadow:0 0 8px ${color}"></div>
+      <div class="bar-lbl">${d}<br/><span style="color:var(--text)">${vals[i]}</span></div>
+    </div>`;
+  }).join('');
+
+  // Alerts
+  const domain = state.phishDomain || 'facebo0k-secure.net';
+  document.getElementById('alert-list').innerHTML = alertsData.map(a => `
+    <div class="alert-item ${a.type}">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-content">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-desc">${a.desc.replace('{domain}', domain)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="alert-badge badge-${a.type === 'critical' ? 'critical' : a.type === 'warning' ? 'warning' : 'info'}">${a.badge}</div>
+        <div class="alert-time" style="margin-top:4px">${a.time}</div>
+      </div>
+    </div>`).join('');
+
+  // Rules
+  document.getElementById('rules-list').innerHTML = rulesData.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--accent)">${r.name}</div>
+        <div style="font-size:0.72rem;color:var(--text-dim)">${r.status}</div>
+      </div>
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--warn)">${r.hits} hits</div>
+    </div>`).join('');
+}
+
+// ===================== PHASE 4 =====================
+function generateReport() {
+  const name = document.getElementById('r-name').value || 'Étudiant(e)';
+  const univ = document.getElementById('r-univ').value || 'Université';
+  const prof = document.getElementById('r-prof').value || 'Professeur';
+  const year = document.getElementById('r-year').value || '2024-2025';
+  const date = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'});
+  const target = templates[state.phishingTarget]?.name || 'Facebook';
+  const domain = state.phishDomain || 'facebo0k-secure.net';
+  const ip = state.analysisData?.origIP || '185.220.101.45';
+
+  document.getElementById('report-content').innerHTML = `
+    <div class="report-header">
+      <div>
+        <div style="font-size:0.75rem;color:#888;font-family:monospace;margin-bottom:4px">RAPPORT TECHNIQUE — TP CYBERCRIMINALITÉ</div>
+        <h1>Simulation et Détection d'Attaque Phishing</h1>
+        <div style="font-size:0.85rem;color:#444;margin-top:6px;font-family:'Rajdhani',sans-serif">Module : Cybercriminalité & Sécurité Informatique | Niveau Master</div>
+      </div>
+      <div class="meta">
+        Étudiant : <strong>${name}</strong><br>
+        Établissement : ${univ}<br>
+        Encadreur : ${prof}<br>
+        Année : ${year}<br>
+        Date : ${date}
+      </div>
+    </div>
+
+    <div class="report-section">
+      <h2>1. Introduction et Objectifs</h2>
+      <p>Ce travail pratique s'inscrit dans le cadre du module de Cybercriminalité de niveau Master. L'objectif principal est de comprendre les mécanismes d'une attaque par phishing, depuis sa conception jusqu'à sa détection, en passant par l'analyse forensique des indicateurs de compromission.</p>
+      <p>Le présent rapport documente les trois phases réalisées : (1) simulation d'une page de phishing ciblant ${target}, (2) analyse des en-têtes email pour identifier l'origine de l'attaque, et (3) mise en place de règles de détection automatisées.</p>
+    </div>
+
+    <div class="report-section">
+      <h2>2. Environnement de Travail</h2>
+      <table class="report-table">
+        <tr><th>Composant</th><th>Détail</th><th>Rôle</th></tr>
+        <tr><td>CyberLab Simulator</td><td>v1.0 — Environnement virtuel</td><td>Plateforme TP</td></tr>
+        <tr><td>Wireshark</td><td>v4.x</td><td>Capture réseau</td></tr>
+        <tr><td>Analyseur SMTP</td><td>Intégré</td><td>Analyse headers</td></tr>
+        <tr><td>Moteur YARA</td><td>v4.3</td><td>Règles détection</td></tr>
+        <tr><td>SIEM Dashboard</td><td>Custom</td><td>Monitoring</td></tr>
+      </table>
+    </div>
+
+    <div class="report-section">
+      <h2>3. Phase 1 — Simulation de l'Attaque Phishing</h2>
+      <p>Une page de login frauduleuse imitant <strong>${target}</strong> a été créée sous le domaine typosquatté <code>${domain}</code>. L'attaque utilise des techniques d'ingénierie sociale classiques : urgence artificielle, imitation visuelle fidèle, et URL trompeuse.</p>
+      <table class="report-table">
+        <tr><th>Indicateur (IOC)</th><th>Valeur</th><th>Sévérité</th></tr>
+        <tr><td>Domaine malveillant</td><td>${domain}</td><td><span class="report-badge rb-high">ÉLEVÉE</span></td></tr>
+        <tr><td>Typosquatting</td><td>Substitution caractères (0→o)</td><td><span class="report-badge rb-high">ÉLEVÉE</span></td></tr>
+        <tr><td>Certificat SSL</td><td>Auto-signé / absent</td><td><span class="report-badge rb-med">MOYENNE</span></td></tr>
+        <tr><td>Page de login factice</td><td>Copie de ${target}</td><td><span class="report-badge rb-high">ÉLEVÉE</span></td></tr>
+      </table>
+    </div>
+
+    <div class="report-section">
+      <h2>4. Phase 2 — Analyse Forensique des En-têtes Email</h2>
+      <p>L'analyse des en-têtes SMTP a révélé plusieurs anomalies critiques confirmant la nature malveillante de l'email. Les mécanismes d'authentification SPF, DKIM et DMARC ont tous échoué, indiquant un spoofing d'identité caractérisé.</p>
+      <table class="report-table">
+        <tr><th>Champ Analysé</th><th>Valeur Trouvée</th><th>Résultat</th><th>Sévérité</th></tr>
+        <tr><td>SPF</td><td>spf=fail</td><td>❌ FAIL</td><td><span class="report-badge rb-high">CRITIQUE</span></td></tr>
+        <tr><td>DKIM</td><td>dkim=fail</td><td>❌ FAIL</td><td><span class="report-badge rb-high">CRITIQUE</span></td></tr>
+        <tr><td>DMARC</td><td>p=none</td><td>⚠️ NONE</td><td><span class="report-badge rb-med">MOYENNE</span></td></tr>
+        <tr><td>IP Origine</td><td>${ip}</td><td>🌍 TOR Exit Node — RU</td><td><span class="report-badge rb-high">CRITIQUE</span></td></tr>
+        <tr><td>Réputation IP</td><td>AbuseIPDB: 97%</td><td>⚠️ Blacklistée</td><td><span class="report-badge rb-high">CRITIQUE</span></td></tr>
+      </table>
+    </div>
+
+    <div class="report-section">
+      <h2>5. Phase 3 — Détection et Règles SIEM/YARA</h2>
+      <p>Sur la base des IOCs identifiés, 5 règles de détection ont été déployées dans le SIEM. Durant la période d'observation simulée (7 jours), le système a traité 247 tentatives et bloqué 231 emails malveillants, soit un taux de détection de 93%.</p>
+      <table class="report-table">
+        <tr><th>Règle</th><th>Type</th><th>Résultats</th></tr>
+        <tr><td>SPF_DKIM_FAIL_BLOCK</td><td>SIEM</td><td>47 correspondances</td></tr>
+        <tr><td>TOR_EXIT_NODE_BLOCK</td><td>Firewall</td><td>23 IPs bloquées</td></tr>
+        <tr><td>TYPOSQUATTING_DETECT</td><td>YARA</td><td>12 domaines</td></tr>
+        <tr><td>BASE64_SUBJECT_FLAG</td><td>SIEM</td><td>8 alertes</td></tr>
+        <tr><td>NEW_DOMAIN_FLAG</td><td>Threat Intel</td><td>5 détections</td></tr>
+      </table>
+    </div>
+
+    <div class="report-section">
+      <h2>6. Recommandations de Sécurité</h2>
+      <p><strong>1. Authentification email :</strong> Configurer et appliquer SPF, DKIM et DMARC en mode rejet (p=reject) pour bloquer le spoofing de domaine.</p>
+      <p><strong>2. Sensibilisation utilisateurs :</strong> Former les employés à reconnaître les signaux d'alerte des emails de phishing (urgence, URL suspecte, expéditeur inconnu).</p>
+      <p><strong>3. Surveillance continue :</strong> Déployer un SIEM avec des règles de détection comportementales et une threat intelligence à jour.</p>
+      <p><strong>4. Filtrage DNS :</strong> Utiliser des solutions de filtrage DNS pour bloquer les domaines malveillants et les infrastructures de phishing connues.</p>
+    </div>
+
+    <div class="report-section">
+      <h2>7. Conclusion</h2>
+      <p>Ce TP a permis d'appréhender concrètement les mécanismes d'une attaque phishing, de l'étape de préparation jusqu'à la mise en place de contre-mesures techniques. La combinaison d'analyse forensique, de règles YARA et de surveillance SIEM constitue une approche défense en profondeur efficace contre ce type de menace.</p>
+    </div>
+
+    <div class="report-footer">
+      <span>CyberLab TP — Module Cybercriminalité | Master Sécurité</span>
+      <span>Généré le ${date} | Score menace détectée: 94/100</span>
+    </div>`;
+
+  document.getElementById('report-output').style.display = 'block';
+  showToast('📄 Rapport généré avec succès !');
+}
+
+function printReport() {
+  window.print();
+}
+
+// ===================== UTILS =====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
